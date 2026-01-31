@@ -1,41 +1,31 @@
-# ASP.NET Core
-# Build and test ASP.NET Core projects targeting .NET Core.
-# Add steps that run tests, create a NuGet package, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
-
 trigger:
-- master
-
-strategy:
-  matrix:
-    linux:
-      imageName: "ubuntu-latest"
-    mac:
-      imageName: "macOS-latest"
-    windows:
-      imageName: "windows-latest"
-  maxParallel: 3
+- main
 
 pool:
-  vmImage: $(imageName)
+  vmImage: 'windows-latest'
 
 strategy:
   matrix:
-    jdk10:
-      jdkVersion: "1.10"
-    jdk11:
-      jdkVersionOption: $(jdkVersion)
-  maxParallel: 2
+    net6:
+      dotnetVersion: '6.0.x'
+    net8:
+      dotnetVersion: '8.0.x'
 
 variables:
   buildConfiguration: 'Release'
 
 steps:
-- script: dotnet build --configuration $(buildConfiguration)
-  displayName: 'dotnet build $(buildConfiguration)'
-
-- task: PublishCodeCoverageResults@2
+- task: UseDotNet@2
+  displayName: 'Install .NET SDK $(dotnetVersion)'
   inputs:
-    summaryFileLocation: "$(System.DefaultWorkingDirectory)/**/site/jacoco/jacoco.xml" # Path to summary files
-    reportDirectory: "$(System.DefaultWorkingDirectory)/**/site/jacoco" # Path to report directory
-    failIfCoverageEmpty: true # Fail if code coverage results are missing
+    packageType: 'sdk'
+    version: '$(dotnetVersion)'
+
+- script: dotnet restore
+  displayName: 'Restore packages'
+
+- script: dotnet build --configuration $(buildConfiguration) --no-restore
+  displayName: 'Build'
+
+- script: dotnet test --configuration $(buildConfiguration) --no-build
+  displayName: 'Run tests'
